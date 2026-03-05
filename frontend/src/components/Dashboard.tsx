@@ -157,7 +157,7 @@ export function Dashboard() {
         { headers: getAuthHeaders(), signal },
       )
       const data = await response.json()
-      if (data.success) setModels(data.data)
+      if (data.success) setModels(Array.isArray(data?.data) ? data.data : [])
       return true
     } catch (error) { console.error('Failed to fetch models:', error) }
     return false
@@ -181,7 +181,7 @@ export function Dashboard() {
         )
       }
       const data = await response.json()
-      if (data.success) setDailyTrends(data.data)
+      if (data.success) setDailyTrends(Array.isArray(data?.data) ? data.data : [])
       return true
     } catch (error) { console.error('Failed to fetch trends:', error) }
     return false
