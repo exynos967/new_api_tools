@@ -424,10 +424,11 @@ export function ModelStatusMonitor({ isEmbed = false }: ModelStatusMonitorProps)
         headers: getAuthHeaders(),
       })
       const data = await response.json()
+      const selectedModelsFromApi = Array.isArray(data?.data) ? data.data : []
       if (data.success) {
-        if (data.data.length > 0) {
-          setSelectedModels(data.data)
-          localStorage.setItem(SELECTED_MODELS_KEY, JSON.stringify(data.data))
+        if (selectedModelsFromApi.length > 0) {
+          setSelectedModels(selectedModelsFromApi)
+          localStorage.setItem(SELECTED_MODELS_KEY, JSON.stringify(selectedModelsFromApi))
         }
         if (data.time_window) {
           setTimeWindow(data.time_window)
@@ -452,7 +453,7 @@ export function ModelStatusMonitor({ isEmbed = false }: ModelStatusMonitorProps)
           setCustomOrder(data.custom_order)
           localStorage.setItem(CUSTOM_ORDER_KEY, JSON.stringify(data.custom_order))
         }
-        return data.data || []
+        return selectedModelsFromApi
       }
     } catch (error) {
       console.error('Failed to load config from backend:', error)
@@ -481,20 +482,21 @@ export function ModelStatusMonitor({ isEmbed = false }: ModelStatusMonitorProps)
       })
       const data = await response.json()
       if (data.success) {
-        // data.data is now an array of { model_name, request_count_24h }
-        setAvailableModels(data.data)
+        // data.data should be an array, guard against null from backend.
+        const availableModelsFromApi: ModelWithStats[] = Array.isArray(data?.data) ? data.data : []
+        setAvailableModels(availableModelsFromApi)
         // Load config from backend
         const savedModels = await loadConfigFromBackend()
         // Auto-select models with requests in last 24h if none selected
-        if (savedModels.length === 0 && data.data.length > 0) {
+        if (savedModels.length === 0 && availableModelsFromApi.length > 0) {
           // Filter models that have requests in the last 24 hours
-          const activeModels = data.data
+          const activeModels = availableModelsFromApi
             .filter((m: ModelWithStats) => m.request_count_24h > 0)
             .map((m: ModelWithStats) => m.model_name)
           // If no active models, fall back to first 5
           const defaultModels = activeModels.length > 0
             ? activeModels
-            : data.data.slice(0, 5).map((m: ModelWithStats) => m.model_name)
+            : availableModelsFromApi.slice(0, 5).map((m: ModelWithStats) => m.model_name)
           setSelectedModels(defaultModels)
           saveSelectedModelsToBackend(defaultModels)
         }
@@ -531,7 +533,7 @@ export function ModelStatusMonitor({ isEmbed = false }: ModelStatusMonitorProps)
       })
       const data = await response.json()
       if (data.success) {
-        setModelStatuses(data.data)
+        setModelStatuses(Array.isArray(data?.data) ? data.data : [])
         setInitialLoading(false)
       }
     } catch (error) {

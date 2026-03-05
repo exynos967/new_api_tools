@@ -819,9 +819,10 @@ export function ModelStatusEmbed({
     try {
       const response = await fetch(`${apiUrl}/api/model-status/embed/config/selected`)
       const data = await response.json()
+      const selectedModelsFromApi: string[] = Array.isArray(data?.data) ? data.data : []
       if (data.success) {
-        if (data.data.length > 0) {
-          setSelectedModels(data.data)
+        if (selectedModelsFromApi.length > 0) {
+          setSelectedModels(selectedModelsFromApi)
         }
         if (data.time_window) {
           setTimeWindow(data.time_window)
@@ -838,7 +839,7 @@ export function ModelStatusEmbed({
           const validTheme = THEMES.find(t => t.id === data.theme) ? data.theme : 'daylight'
           setTheme(validTheme as ThemeId)
         }
-        return data.data || []
+        return selectedModelsFromApi
       }
     } catch (error) {
       console.error('Failed to load config from backend:', error)
@@ -867,7 +868,7 @@ export function ModelStatusEmbed({
       })
       const data = await response.json()
       if (data.success) {
-        setModelStatuses(data.data)
+        setModelStatuses(Array.isArray(data?.data) ? data.data : [])
         setLastUpdate(new Date())
       }
     } catch (error) {
