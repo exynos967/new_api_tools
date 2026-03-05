@@ -39,6 +39,7 @@ export function Layout({ children, activeTab, onTabChange, onLogout }: LayoutPro
   const [dbStatus, setDbStatus] = useState<DbStatus | null>(null)
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0, opacity: 0 })
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([])
+  const engineLabel = dbStatus?.engine ? dbStatus.engine.toUpperCase() : 'DB'
 
   useEffect(() => {
     const fetchDbStatus = async () => {
@@ -46,12 +47,15 @@ export function Layout({ children, activeTab, onTabChange, onLogout }: LayoutPro
         const apiUrl = import.meta.env.VITE_API_URL || ''
         const response = await fetch(`${apiUrl}/api/health/db`)
         const data = await response.json()
-        if (data.success) {
+        // Support both flat and nested response shapes to avoid runtime crashes.
+        const payload = (data && typeof data === 'object' && 'data' in data && data.data) ? data.data : data
+        const isConnected = payload?.connected === true || payload?.status === 'connected'
+        if (data?.success && isConnected) {
           setDbStatus({
             connected: true,
-            engine: data.engine,
-            host: data.host,
-            database: data.database,
+            engine: typeof payload?.engine === 'string' ? payload.engine : '',
+            host: typeof payload?.host === 'string' ? payload.host : '',
+            database: typeof payload?.database === 'string' ? payload.database : '',
           })
         } else {
           setDbStatus({ connected: false, engine: '', host: '', database: '' })
@@ -119,7 +123,7 @@ export function Layout({ children, activeTab, onTabChange, onLogout }: LayoutPro
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${dbStatus.connected ? 'bg-white animate-pulse' : 'bg-white/50'}`} />
                     {dbStatus.connected
-                      ? <span className="text-[10px] font-medium opacity-90">{dbStatus.engine.toUpperCase()}</span>
+                      ? <span className="text-[10px] font-medium opacity-90">{engineLabel}</span>
                       : '离线'}
                   </Badge>
                 )}

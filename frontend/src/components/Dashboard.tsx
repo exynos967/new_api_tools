@@ -195,21 +195,22 @@ export function Dashboard() {
         { headers: getAuthHeaders(), signal },
       )
       const data = await response.json()
+      const topUsers = Array.isArray(data?.data) ? data.data : []
 
-      if (data.success && data.data.length > 0) {
-        const sortedByRequest = [...data.data].sort((a: any, b: any) => b.request_count - a.request_count)
-        const sortedByQuota = [...data.data].sort((a: any, b: any) => b.quota_used - a.quota_used)
+      if (data?.success && topUsers.length > 0) {
+        const sortedByRequest = [...topUsers].sort((a: any, b: any) => safeNumber(b?.request_count) - safeNumber(a?.request_count))
+        const sortedByQuota = [...topUsers].sort((a: any, b: any) => safeNumber(b?.quota_used) - safeNumber(a?.quota_used))
 
         setAnalyticsSummary({
           request_king: sortedByRequest.length > 0 ? {
-            user_id: sortedByRequest[0].user_id,
-            username: sortedByRequest[0].username,
-            request_count: sortedByRequest[0].request_count,
+            user_id: safeNumber(sortedByRequest[0]?.user_id),
+            username: String(sortedByRequest[0]?.username || '#'),
+            request_count: safeNumber(sortedByRequest[0]?.request_count),
           } : null,
           quota_king: sortedByQuota.length > 0 ? {
-            user_id: sortedByQuota[0].user_id,
-            username: sortedByQuota[0].username,
-            quota_used: sortedByQuota[0].quota_used,
+            user_id: safeNumber(sortedByQuota[0]?.user_id),
+            username: String(sortedByQuota[0]?.username || '#'),
+            quota_used: safeNumber(sortedByQuota[0]?.quota_used),
           } : null,
         })
       } else {
@@ -726,7 +727,7 @@ export function Dashboard() {
           />
           <StatCard
             title="平均响应"
-            value={`${(usage?.average_response_time || 0).toFixed(3)}ms`}
+            value={`${safeNumber(usage?.average_response_time).toFixed(3)}ms`}
             icon={Clock}
             color="rose"
             variant="compact"
@@ -793,7 +794,7 @@ export function Dashboard() {
           icon={Zap}
           user={analyticsSummary?.request_king}
           valueLabel="总请求数"
-          value={analyticsSummary?.request_king?.request_count.toLocaleString()}
+          value={analyticsSummary?.request_king ? safeNumber(analyticsSummary.request_king.request_count).toLocaleString('zh-CN') : undefined}
           gradient="from-blue-600 to-indigo-600"
           accentColor="text-blue-100"
         />
@@ -842,6 +843,11 @@ function StatCard({ title, value, rawValue, subValue, icon: Icon, color, variant
   }
 
   const theme = colorMap[color] || colorMap.blue
+  const displayValue = value === undefined || value === null
+    ? '0'
+    : typeof value === 'number'
+      ? value.toLocaleString('zh-CN')
+      : String(value)
 
   if (variant === 'compact') {
     // Auto-size font based on value string length
@@ -875,7 +881,7 @@ function StatCard({ title, value, rawValue, subValue, icon: Icon, color, variant
         <div className="flex justify-between items-start relative z-10">
           <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <div className="text-2xl font-bold tracking-tight text-foreground/90">{value.toLocaleString()}</div>
+            <div className="text-2xl font-bold tracking-tight text-foreground/90">{displayValue}</div>
           </div>
           <div className={cn("p-3 rounded-2xl transition-all duration-300 group-hover:scale-110 shadow-sm", theme.bg)}>
             <Icon className="w-5 h-5" />
@@ -904,7 +910,14 @@ interface KingCardProps {
   accentColor: string
 }
 
+function safeNumber(value: unknown): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
 function KingCard({ title, subtitle, icon: Icon, user, valueLabel, value, gradient, accentColor }: KingCardProps) {
+  const userName = user?.username ? String(user.username) : '#'
+
   return (
     <div className={`glass-card bg-gradient-to-br ${gradient} rounded-2xl shadow-lg p-6 text-white relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-white/20`}>
       {/* Background Pattern */}
@@ -926,10 +939,10 @@ function KingCard({ title, subtitle, icon: Icon, user, valueLabel, value, gradie
         <div className="mt-6 relative z-10">
           <div className="flex items-center bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/10">
             <div className="h-12 w-12 rounded-full bg-white text-blue-600 flex items-center justify-center text-xl font-bold shadow-sm">
-              {user.username.charAt(0).toUpperCase()}
+              {userName.charAt(0).toUpperCase()}
             </div>
             <div className="ml-4">
-              <p className="text-xl font-bold">{user.username}</p>
+              <p className="text-xl font-bold">{userName}</p>
               <p className={`text-xs ${accentColor}`}>User ID: {user.user_id}</p>
             </div>
           </div>
